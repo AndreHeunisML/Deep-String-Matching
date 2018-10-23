@@ -65,13 +65,6 @@ def embed_data(fpath, char_to_index_fpath, min_len, max_len):
         anchor_lengths.append(len(anchor_char))
         match_lengths.append(len(match_char))
 
-    # figure()
-    # subplot(211)
-    # sns.distplot(anchor_lengths)
-    # subplot(212)
-    # sns.distplot(match_lengths)
-    # show()
-
     num_samples = len(anchor_char_full)
     anchor_char_final = np.zeros((num_samples, max_len))
     match_char_final = np.zeros((num_samples, max_len))
