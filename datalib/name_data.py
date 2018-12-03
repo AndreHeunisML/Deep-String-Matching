@@ -24,7 +24,7 @@ def import_data(filepath):
             x1.append(l[1].lower())
             x2.append(l[0].lower())
 
-    return pd.DataFrame(data={'anchor': x1, 'pos_match': x2})
+    return pd.DataFrame(data={'anchor': x1, 'match': x2})
 
 
 def get_all_names():

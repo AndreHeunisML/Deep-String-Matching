@@ -17,8 +17,8 @@ def get_json(fpath):
         anchor.extend(val)
         pos.extend([key] * len(val))
 
-    res = pd.DataFrame(data={'anchor': anchor, 'pos_match': pos})
-    res = res[res.anchor != res.pos_match]
+    res = pd.DataFrame(data={'anchor': anchor, 'match': pos})
+    res = res[res.anchor != res.match]
 
     return res
 

@@ -1,48 +1,39 @@
 
-
-import json
 import pandas as pd
-import torch as tc
+import numpy as np
 
 
-class StringPrinter:
-
-    def __init__(self):
-        char_to_index_fpath = '../datalib/data/char_embeddings/char_to_index_28.json'
-        with open(char_to_index_fpath) as _:
-            self.char_to_index = json.load(_)
-
-        self.index_to_char = dict((y, x) for x, y in self.char_to_index.items())
-
-    def get_string_from_embedding(self, em):
-        return ''.join([self.index_to_char[i] for i in em.numpy() if i != 0])
-
-
-def load_data(train_path=None, test_path=None):
+def load_data(anchor_path, match_path, train_proportion):
     print("Loading data...")
 
-    anchor_train = None
-    positive_train = None
-    anchor_test = None
-    positive_test = None
+    anchor = pd.read_csv(anchor_path)
+    match = pd.read_csv(match_path)
 
-    if train_path is not None:
-        train = pd.read_csv(train_path)
-        print("{} train samples".format(train.shape))
-        anchor_cols = [col for col in train.columns if 'anchor' in col and 'length' not in col]
-        match_cols = [col for col in train.columns if 'match' in col and 'length' not in col]
-        anchor_train = tc.from_numpy(train[anchor_cols].values).long()
-        positive_train = tc.from_numpy(train[match_cols].values).long()
+    print('full anchor length: ', len(anchor))
+    print('full match length: ', len(match))
 
-    if test_path is not None:
-        test = pd.read_csv(test_path)
-        print("{} test samples".format(test.shape))
-        anchor_cols = [col for col in test.columns if 'anchor' in col and 'length' not in col]
-        match_cols = [col for col in test.columns if 'match' in col and 'length' not in col]
-        anchor_test = tc.from_numpy(test[anchor_cols].values).long()
-        positive_test = tc.from_numpy(test[match_cols].values).long()
+    total_anchor_count = len(anchor)
+    anchor_index = np.copy(anchor['anchor_index'].values)
+    np.random.shuffle(anchor_index)
 
-    return {"anchor": anchor_train,
-            "match": positive_train,
-            "anchor_test": anchor_test,
-            "match_test": positive_test}
+    index_lim = int(train_proportion * total_anchor_count)
+    train_index = anchor_index[:index_lim]
+    test_index = anchor_index[index_lim:]
+
+    train_anchor = anchor[anchor.anchor_index.isin(train_index)]
+    train_match = match[match['anchor_index'].isin(train_index)]
+
+    test_anchor = anchor[anchor['anchor_index'].isin(test_index)]
+    test_match = match[match['anchor_index'].isin(test_index)]
+
+    print("Train and test counts")
+    print(len(train_anchor))
+    print(len(test_anchor))
+    print(len(train_match))
+    print(len(test_match))
+
+
+    return {"train_anchor": train_anchor,
+            "test_anchor": test_anchor,
+            "train_match": train_match,
+            "test_match": test_match}

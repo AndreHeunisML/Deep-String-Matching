@@ -1,62 +1,75 @@
 #
 
 import pandas as pd
+import numpy as np
+import time
 
-from text_match.dataprep.abb_data import get_all_abb
-from text_match.dataprep.name_data import get_all_names
-from text_match.dataprep.spelling_data import get_all_spell
-from text_match.dataprep.stemlem_data import get_all_stemlem
-from text_match.dataprep.prepare_char_embeddings import embed_data
-from text_match.dataprep.termtext import get_all_termtext
-
-
-def split_train_dev(data, train_ratio):
-    """
-    85 / 15
-
-    :param data:
-    :return:
-    """
-    total_count = len(data)
-    train = int(train_ratio * total_count)
-
-    return data.iloc[:train], data.iloc[train:]
+from datalib.abb_data import get_all_abb
+from datalib.name_data import get_all_names
+from datalib.spelling_data import get_all_spell
+from datalib.stemlem_data import get_all_stemlem
+from datalib.prepare_char_embeddings import embed_data, clean_strings
+from datalib.termtext import get_all_termtext
+from datalib.news_data import get_all_news
 
 
 if __name__ == "__main__":
 
+    start = time.time()
+
+    #source = 'pretrain'
     source = 'pretrain'
-    #source = 'termtext'
     emb_dir = 'data/char_embeddings/char_to_index_28.json'
+    min_len = 3
+    max_len = 32
 
     if source == 'pretrain':
-        all_data = pd.concat([get_all_abb(), get_all_names(), get_all_spell(), get_all_stemlem()])
-        raw_dir = 'data/pretraining/raw.csv'
-        out_train = 'data/pretraining/standard_train.csv'
-        out_test = 'data/pretraining/standard_test.csv'
+        all_data = pd.concat([get_all_abb(), get_all_spell(), get_all_names(), get_all_stemlem(), get_all_news()])
+        raw_anchors_dir = 'data/pretraining/raw_anchors.csv'
+        raw_matches_dir = 'data/pretraining/raw_matches.csv'
+        out_anchor = 'data/pretraining/standard_anchor.csv'
+        out_match = 'data/pretraining/standard_match.csv'
 
     elif source == 'termtext':
         all_data = get_all_termtext()
         raw_dir = 'data/termtext/raw.csv'
-        out_train = 'data/termtext/standard_train.csv'
-        out_test = 'data/termtext/standard_test.csv'
+        raw_anchors_dir = 'data/termtext/raw_anchors.csv'
+        raw_matches_dir = 'data/termtext/raw_matches.csv'
+        out_anchor = 'data/termtext/standard_anchor.csv'
+        out_match = 'data/termtext/standard_match.csv'
 
+    print("Cleaning input strings")
+    all_data = clean_strings(all_data, min_len, max_len)
 
-    # shuffle rows
-    all_data = all_data.sample(frac=1)
-    print(len(all_data))
+    # Split into DFs of unique anchors and matches
+    all_data["anchor_index"] = range(len(all_data))
+    anchor_distinct = all_data[["anchor", "anchor_index"]].groupby("anchor").first().reset_index()
+    anchor_distinct.reset_index(drop=True)
 
-    all_data.to_csv(raw_dir, mode='w+', index=False)
+    # add reduced anchor indices to the matches
+    pos_matches = all_data[["anchor", "match"]]\
+        .reset_index(drop=True).merge(anchor_distinct, on='anchor')[['match', 'anchor_index']]
+    pos_matches = pos_matches.drop_duplicates()
 
-    aggregated = embed_data(raw_dir, emb_dir, min_len=2, max_len=36)
-    print(len(aggregated))
+    print("Number of unique anchors: ", len(all_data["anchor"].unique()))
+    print("Number of unique matches: ", len(all_data["match"].unique()))
 
-    aggregated_train, aggregated_test = split_train_dev(aggregated, 0.9)
-    print(len(aggregated_train))
-    print(len(aggregated_test))
+    anchor_distinct.to_csv(raw_anchors_dir, mode='w+', index=False)
+    pos_matches.to_csv(raw_matches_dir, mode='w+', index=False)
 
-    aggregated_train.to_csv(out_train, mode='w+', index=False)
-    aggregated_test.to_csv(out_test, mode='w+', index=False)
+    # raw_anchor_data = pd.read_csv(raw_anchors_dir)
+    # print(raw_anchor_data[raw_anchor_data['anchor_index'] == 44199])
+    # raw_match_data = pd.read_csv(raw_matches_dir)
+    # print(raw_match_data[raw_match_data['anchor_index'] == 44199])
+
+    print('Embed docs')
+    anchor_embed = embed_data(raw_anchors_dir, "anchor", emb_dir, max_len=max_len)
+    match_embed = embed_data(raw_matches_dir, "match", emb_dir, max_len=max_len)
+
+    anchor_embed.to_csv(out_anchor, mode='w+', index=False)
+    match_embed.to_csv(out_match, mode='w+', index=False)
+
+    print((time.time() - start) / 60.0)
 
 
 

@@ -18,8 +18,8 @@ def get_txt_spell(filepath):
         anchors.extend([anchor] * len(all_positives))
         positives.extend(all_positives)
 
-    res = pd.DataFrame(data={'anchor': anchors, 'pos_match': positives})
-    res = res[res.anchor != res.pos_match]
+    res = pd.DataFrame(data={'anchor': anchors, 'match': positives})
+    res = res[res.anchor != res.match]
 
     return res
 
@@ -27,7 +27,7 @@ def get_txt_spell(filepath):
 def get_csv_spell(filepath):
 
     d = pd.read_csv(filepath)
-    d.columns = ["anchor", "pos_match"]
+    d.columns = ["anchor", "match"]
 
     return d
 

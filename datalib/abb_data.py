@@ -140,11 +140,11 @@ def get_all_abb():
     for key, val in abbs1.items():
         anchor.append(key)
         pos.append(val)
-    abbs1 = pd.DataFrame(data={'anchor': anchor, 'pos_match': pos})
+    abbs1 = pd.DataFrame(data={'anchor': anchor, 'match': pos})
 
     abbs2 = pd.read_csv("data/abbv/abbreviations.csv")
     abbs2 = abbs2.iloc[7:][["Abbreviation", "Meaning (English)"]]
-    abbs2.columns = ["anchor", "pos_match"]
+    abbs2.columns = ["anchor", "match"]
 
     return pd.concat([abbs1, abbs2])
 
